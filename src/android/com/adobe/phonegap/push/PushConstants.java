@@ -67,4 +67,8 @@ public interface PushConstants {
     public static final String TWILIO_BODY = "twi_body";
     public static final String TWILIO_TITLE = "twi_title";
     public static final String TWILIO_SOUND = "twi_sound";
+    public static final String LINES = "lines";
+    public static final String SILENT = "silent";
+    public static final String CONTENT_UPDATE = "content-update";
+    public static final String FOREGROUND_PRIORITY = "foregroundPriority";
 }

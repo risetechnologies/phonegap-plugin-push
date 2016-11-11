@@ -45,15 +45,14 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
     private static HashMap<Integer, ArrayList<String>> messageMap = new HashMap<Integer, ArrayList<String>>();
 
     public void setNotification(int notId, String message){
-        ArrayList<String> messageList = messageMap.get(notId);
-        if(messageList == null) {
-            messageList = new ArrayList<String>();
-            messageMap.put(notId, messageList);
-        }
-
         if(message.isEmpty()){
-            messageList.clear();
-        }else{
+            messageMap.remove(notId);
+        } else {
+            ArrayList<String> messageList = messageMap.get(notId);
+            if(messageList == null) {
+                messageList = new ArrayList<String>();
+                messageMap.put(notId, messageList);
+            }
             messageList.add(message);
         }
     }
@@ -70,13 +69,43 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
             boolean clearBadge = prefs.getBoolean(CLEAR_BADGE, false);
 
             extras = normalizeExtras(applicationContext, extras);
+            String clearNotifications = extras.getString(CLEAR_NOTIFICATIONS);
+            int contentUpdate = parseInt(CONTENT_UPDATE, extras);
+
 
             if (clearBadge) {
                 PushPlugin.setApplicationIconBadgeNumber(getApplicationContext(), 0);
             }
 
+            if (clearNotifications != null) {
+                Log.d(LOG_TAG, clearNotifications);
+                try {
+                    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    Log.d(LOG_TAG, "cancel notifications " + clearNotifications);
+                    JSONArray notificationIds = new JSONArray(clearNotifications);
+                    if (notificationIds != null) {
+                        for (int i=0; i<notificationIds.length(); i++) {
+                            int notificationId = notificationIds.optInt(i);
+                            cancelNotification(notificationId);
+                        }
+                    }
+                } catch(JSONException e) {
+                    Log.e(LOG_TAG, "malformed clear notifications =[" + clearNotifications + "]");
+                }
+            }
+
+            if (contentUpdate == 1) {
+                int notId = parseInt(NOT_ID, extras);
+
+                if (messageMap.containsKey(notId)) {
+                    extras.putBoolean(FOREGROUND, false);
+                    extras.putBoolean(COLDSTART, PushPlugin.isActive());
+
+                    showNotificationIfPossible(applicationContext, extras);
+                }
+            }
             // if we are in the foreground and forceShow is `false` only send data
-            if (!forceShow && PushPlugin.isInForeground()) {
+            else if (!forceShow && PushPlugin.isInForeground()) {
                 Log.d(LOG_TAG, "foreground");
                 extras.putBoolean(FOREGROUND, true);
                 extras.putBoolean(COLDSTART, false);
@@ -98,6 +127,20 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
 
                 showNotificationIfPossible(applicationContext, extras);
             }
+        }
+    }
+
+    /*
+     * Cancel a notification
+     */
+    private void cancelNotification(int notificationId) {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        String appName = getAppName(this);
+
+        if (notificationId != 0) {
+            Log.d(LOG_TAG, "cancel notification id: " + notificationId);
+            setNotification(notificationId, "");
+            notificationManager.cancel(appName, notificationId);
         }
     }
 
@@ -272,7 +315,6 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
     }
 
     private void showNotificationIfPossible (Context context, Bundle extras) {
-
         // Send a notification if there is a message or title, otherwise just send data
         String message = extras.getString(MESSAGE);
         String title = extras.getString(TITLE);
@@ -310,6 +352,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         String appName = getAppName(this);
         String packageName = context.getPackageName();
         Resources resources = context.getResources();
+        int silent = parseInt(SILENT, extras);
 
         int notId = parseInt(NOT_ID, extras);
         Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
@@ -337,12 +380,12 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         Log.d(LOG_TAG, "stored iconColor=" + localIconColor);
         Log.d(LOG_TAG, "stored sound=" + soundOption);
         Log.d(LOG_TAG, "stored vibrate=" + vibrateOption);
+        Log.d(LOG_TAG, "stored silent=" + silent);
 
         /*
          * Notification Vibration
          */
-
-        setNotificationVibration(extras, vibrateOption, mBuilder);
+        if (silent != 1) setNotificationVibration(extras, vibrateOption, mBuilder);
 
         /*
          * Notification Icon Color
@@ -384,19 +427,19 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         /*
          * Notification Sound
          */
-        if (soundOption) {
+        if (silent != 1 && soundOption) {
             setNotificationSound(context, extras, mBuilder);
         }
 
         /*
          *  LED Notification
          */
-        setNotificationLedColor(extras, mBuilder);
+        if (silent != 1) setNotificationLedColor(extras, mBuilder);
 
         /*
          *  Priority Notification
          */
-        setNotificationPriority(extras, mBuilder);
+        setNotificationPriority(context, extras, mBuilder);
 
         /*
          * Notification message
@@ -409,7 +452,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         setNotificationCount(context, extras, mBuilder);
 
         /*
-         * Notification count
+         * Notification visibility
          */
         setVisibility(context, extras, mBuilder);
 
@@ -519,7 +562,6 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         }
     }
 
-
     private void setVisibility(Context context, Bundle extras, NotificationCompat.Builder mBuilder) {
         String visibilityStr = extras.getString(VISIBILITY);
         if (visibilityStr != null) {
@@ -556,6 +598,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
 
     private void setNotificationMessage(int notId, Bundle extras, NotificationCompat.Builder mBuilder) {
         String message = extras.getString(MESSAGE);
+        String lines = extras.getString(LINES);
 
         String style = extras.getString(STYLE, STYLE_TEXT);
         if(STYLE_INBOX.equals(style)) {
@@ -563,7 +606,28 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
 
             mBuilder.setContentText(fromHtml(message));
 
-            ArrayList<String> messageList = messageMap.get(notId);
+            ArrayList<String> messageList = new ArrayList<String>();
+            if (lines != null) {
+                setNotification(notId, "");
+                try {
+                    JSONArray linesList = new JSONArray(lines);
+                    if (linesList != null) {
+                        for (int i=0; i<linesList.length(); i++) {
+                            messageList.add( linesList.optString(i) );
+                            setNotification(notId, linesList.optString(i));
+                        }
+                    }
+                } catch(JSONException e) {
+                    // nope
+                }
+            } else {
+                ArrayList<String> cachedMessages = messageMap.get(notId);
+                messageList.add(message);
+                for (int i=0; i<cachedMessages.size(); i++) {
+                    messageList.add( cachedMessages.get(i) );
+                }
+            }
+
             Integer sizeList = messageList.size();
             if (sizeList > 1) {
                 String sizeListMessage = sizeList.toString();
@@ -576,7 +640,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
                         .setBigContentTitle(fromHtml(extras.getString(TITLE)))
                         .setSummaryText(fromHtml(stacking));
 
-                for (int i = messageList.size() - 1; i >= 0; i--) {
+                for (int i=0; i<messageList.size(); i++) {
                     notificationInbox.addLine(fromHtml(messageList.get(i)));
                 }
 
@@ -663,12 +727,17 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         }
     }
 
-    private void setNotificationPriority(Bundle extras, NotificationCompat.Builder mBuilder) {
+    private void setNotificationPriority(Context context, Bundle extras, NotificationCompat.Builder mBuilder) {
+        SharedPreferences prefs = context.getSharedPreferences(PushPlugin.COM_ADOBE_PHONEGAP_PUSH, Context.MODE_PRIVATE);
+        String foregroundPriority = prefs.getString(FOREGROUND_PRIORITY, null);
+        boolean foreground = extras.getBoolean(FOREGROUND);
         String priorityStr = extras.getString(PRIORITY);
+        if (foreground && foregroundPriority != null) priorityStr = foregroundPriority;
         if (priorityStr != null) {
             try {
                 Integer priority = Integer.parseInt(priorityStr);
                 if (priority >= NotificationCompat.PRIORITY_MIN && priority <= NotificationCompat.PRIORITY_MAX) {
+                    Log.d(LOG_TAG, "Priority set to " + priority);
                     mBuilder.setPriority(priority);
                 } else {
                     Log.e(LOG_TAG, "Priority parameter must be between -2 and 2");
