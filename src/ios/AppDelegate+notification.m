@@ -101,6 +101,7 @@ static char coldstartKey;
     PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
     pushHandler.notificationMessage = userInfo;
     pushHandler.isInline = NO;
+    pushHandler.tapped = true;
     [pushHandler notificationReceived];
 }
 
@@ -113,6 +114,7 @@ static char coldstartKey;
         PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
         pushHandler.notificationMessage = userInfo;
         pushHandler.isInline = YES;
+        pushHandler.tapped = false;
         [pushHandler notificationReceived];
 
         completionHandler(UIBackgroundFetchResultNewData);
@@ -131,39 +133,32 @@ static char coldstartKey;
             silent = [contentAvailable integerValue];
         }
 
-        if (silent == 1) {
-            NSLog(@"this should be a silent push");
-            void (^safeHandler)(UIBackgroundFetchResult) = ^(UIBackgroundFetchResult result){
-                dispatch_async(dispatch_get_main_queue(), ^{
-                    completionHandler(result);
-                });
-            };
+        void (^safeHandler)(UIBackgroundFetchResult) = ^(UIBackgroundFetchResult result){
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completionHandler(result);
+            });
+        };
 
-            PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
+        PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
 
-            if (pushHandler.handlerObj == nil) {
-                pushHandler.handlerObj = [NSMutableDictionary dictionaryWithCapacity:2];
-            }
-
-            id notId = [userInfo objectForKey:@"notId"];
-            if (notId != nil) {
-                NSLog(@"Push Plugin notId %@", notId);
-                [pushHandler.handlerObj setObject:safeHandler forKey:notId];
-            } else {
-                NSLog(@"Push Plugin notId handler");
-                [pushHandler.handlerObj setObject:safeHandler forKey:@"handler"];
-            }
-
-            pushHandler.notificationMessage = userInfo;
-            pushHandler.isInline = NO;
-            [pushHandler notificationReceived];
-        } else {
-            NSLog(@"just put it in the shade");
-            //save it for later
-            self.launchNotification = userInfo;
-
-            completionHandler(UIBackgroundFetchResultNewData);
+        if (pushHandler.handlerObj == nil) {
+            pushHandler.handlerObj = [NSMutableDictionary dictionaryWithCapacity:2];
         }
+
+        id notId = [userInfo objectForKey:@"notId"];
+        if (notId != nil) {
+            NSLog(@"Push Plugin notId %@", notId);
+            [pushHandler.handlerObj setObject:safeHandler forKey:notId];
+        } else {
+            NSLog(@"Push Plugin notId handler");
+            [pushHandler.handlerObj setObject:safeHandler forKey:@"handler"];
+        }
+
+        pushHandler.notificationMessage = userInfo;
+        pushHandler.isInline = NO;
+        pushHandler.tapped = true;
+        [pushHandler notificationReceived];
+        completionHandler(UIBackgroundFetchResultNewData);
     }
 }
 
