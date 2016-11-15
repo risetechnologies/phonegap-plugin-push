@@ -95,7 +95,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
             }
 
             if (contentUpdate == 1) {
-                int notId = parseInt(NOT_ID, extras);
+                int notId = getNotificationId(extras);
 
                 if (messageMap.containsKey(notId)) {
                     extras.putBoolean(FOREGROUND, false);
@@ -354,7 +354,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         Resources resources = context.getResources();
         int silent = parseInt(SILENT, extras);
 
-        int notId = parseInt(NOT_ID, extras);
+        int notId = getNotificationId(extras);
         Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
         notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         notificationIntent.putExtra(PUSH_BUNDLE, extras);
@@ -849,6 +849,22 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         }
 
         return retval;
+    }
+
+    private int getNotificationId(Bundle extras) {
+        String notificationId = extras.getString(NOT_ID);
+        int notId = 0;
+
+        try {
+            notId = Integer.parseInt(notificationId);
+        }
+        catch(Exception e) {
+            if (notificationId != null) {
+                notId = notificationId.hashCode();
+            }
+        }
+
+        return notId;
     }
 
     private Spanned fromHtml(String source) {
