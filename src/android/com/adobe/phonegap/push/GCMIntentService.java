@@ -85,7 +85,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
                     JSONArray notificationIds = new JSONArray(clearNotifications);
                     if (notificationIds != null) {
                         for (int i=0; i<notificationIds.length(); i++) {
-                            int notificationId = notificationIds.optInt(i);
+                            int notificationId = hashCode(notificationIds.getString(i));
                             cancelNotification(notificationId);
                         }
                     }
@@ -95,7 +95,8 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
             }
 
             if (contentUpdate == 1) {
-                int notId = getNotificationId(extras);
+                int notId = hashCode(extras.getString(NOT_ID));
+
 
                 if (messageMap.containsKey(notId)) {
                     extras.putBoolean(FOREGROUND, false);
@@ -354,7 +355,7 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         Resources resources = context.getResources();
         int silent = parseInt(SILENT, extras);
 
-        int notId = getNotificationId(extras);
+        int notId = hashCode(extras.getString(NOT_ID));
         Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
         notificationIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         notificationIntent.putExtra(PUSH_BUNDLE, extras);
@@ -851,20 +852,19 @@ public class GCMIntentService extends GcmListenerService implements PushConstant
         return retval;
     }
 
-    private int getNotificationId(Bundle extras) {
-        String notificationId = extras.getString(NOT_ID);
-        int notId = 0;
+    private int hashCode(String value) {
+        int retval = 0;
 
         try {
-            notId = Integer.parseInt(notificationId);
+            retval = Integer.parseInt(value);
         }
         catch(Exception e) {
-            if (notificationId != null) {
-                notId = notificationId.hashCode();
+            if (value != null) {
+                retval = value.hashCode();
             }
         }
 
-        return notId;
+        return retval;
     }
 
     private Spanned fromHtml(String source) {
