@@ -104,4 +104,5 @@ public interface PushConstants {
   public static final String CLEAR_NOTIFICATION = "clearNotification";
   public static final String LINES = "lines";
   public static final String SILENT = "silent";
+  public static final String CONTENT_UPDATE = "contentUpdate";
 }
