@@ -55,15 +55,15 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
   private static HashMap<Integer, ArrayList<String>> messageMap = new HashMap<Integer, ArrayList<String>>();
 
   public void setNotification(int notId, String message) {
-    ArrayList<String> messageList = messageMap.get(notId);
-    if (messageList == null) {
-      messageList = new ArrayList<String>();
-      messageMap.put(notId, messageList);
-    }
 
     if (message.isEmpty()) {
-      messageList.clear();
+      messageMap.remove(notId);
     } else {
+      ArrayList<String> messageList = messageMap.get(notId);
+      if (messageList == null) {
+        messageList = new ArrayList<String>();
+        messageMap.put(notId, messageList);
+      }
       messageList.add(message);
     }
   }
@@ -659,13 +659,35 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
 
   private void setNotificationMessage(int notId, Bundle extras, NotificationCompat.Builder mBuilder) {
     String message = extras.getString(MESSAGE);
+    String lines = extras.getString(LINES);
     String style = extras.getString(STYLE, STYLE_TEXT);
     if (STYLE_INBOX.equals(style)) {
       setNotification(notId, message);
 
       mBuilder.setContentText(fromHtml(message));
 
-      ArrayList<String> messageList = messageMap.get(notId);
+      ArrayList<String> messageList = new ArrayList<String>();
+      if (lines != null) {
+        setNotification(notId, "");
+        try {
+          JSONArray linesList = new JSONArray(lines);
+          if (linesList.length() != 0) {
+            for (int i = 0; i < linesList.length(); i++) {
+              messageList.add(linesList.optString(i));
+              setNotification(notId, linesList.optString(i));
+            }
+          }
+        } catch (JSONException e) {
+          // nope
+        }
+      } else {
+        ArrayList<String> cachedMessages = messageMap.get(notId);
+        messageList.add(message);
+        for (int i = 0; i < cachedMessages.size(); i++) {
+          messageList.addAll(cachedMessages);
+        }
+      }
+
       Integer sizeList = messageList.size();
       if (sizeList > 1) {
         String sizeListMessage = sizeList.toString();
@@ -677,7 +699,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         NotificationCompat.InboxStyle notificationInbox = new NotificationCompat.InboxStyle()
             .setBigContentTitle(fromHtml(extras.getString(TITLE))).setSummaryText(fromHtml(stacking));
 
-        for (int i = messageList.size() - 1; i >= 0; i--) {
+        for (int i=0; i<messageList.size(); i++) {
           notificationInbox.addLine(fromHtml(messageList.get(i)));
         }
 
