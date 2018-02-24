@@ -98,6 +98,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       String titleKey = prefs.getString(TITLE_KEY, TITLE);
 
       extras = normalizeExtras(applicationContext, extras, messageKey, titleKey);
+      int contentUpdate = parseInt(CONTENT_UPDATE, extras);
       String clearNotifications = extras.getString(CLEAR_NOTIFICATIONS);
 
       if (clearBadge) {
@@ -120,8 +121,18 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         }
       }
 
+      if (contentUpdate == 1) {
+        int notId = parseInt(NOT_ID, extras);
+
+        if (messageMap.containsKey(notId)) {
+          extras.putBoolean(FOREGROUND, false);
+          extras.putBoolean(COLDSTART, PushPlugin.isActive());
+
+          showNotificationIfPossible(applicationContext, extras);
+        }
+      }
       // if we are in the foreground and forceShow is `false` only send data
-      if (!forceShow && PushPlugin.isInForeground()) {
+      else if (!forceShow && PushPlugin.isInForeground()) {
         Log.d(LOG_TAG, "foreground");
         extras.putBoolean(FOREGROUND, true);
         extras.putBoolean(COLDSTART, false);
