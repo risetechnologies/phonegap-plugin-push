@@ -96,7 +96,9 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
             silent = [contentAvailable integerValue];
         }
 
-        if (silent == 1) {
+        NSString * clearNotificationsString = [userInfo objectForKey:@"clearNotifications"];
+        // don't wakeup the app on clearNotifications - this is a decision based on performance
+        if (silent == 1 && clearNotificationsString == nil) {
             NSLog(@"this should be a silent push");
             void (^safeHandler)(UIBackgroundFetchResult) = ^(UIBackgroundFetchResult result){
                 dispatch_async(dispatch_get_main_queue(), ^{
@@ -123,6 +125,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
             pushHandler.isInline = NO;
             [pushHandler notificationReceived];
         } else {
+            [self clearNotifications:userInfo];
             NSLog(@"just put it in the shade");
             //save it for later
             self.launchNotification = userInfo;
@@ -130,6 +133,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
         }
 
     } else {
+        [self clearNotifications:userInfo];
         completionHandler(UIBackgroundFetchResultNoData);
     }
 }
@@ -186,6 +190,33 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
     [[NSNotificationCenter defaultCenter] postNotificationName:pushPluginApplicationDidBecomeActiveNotification object:nil];
 }
 
+- (void)clearNotifications:(NSDictionary *)userInfo
+{
+    PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
+
+    @try {
+        NSString * clearNotificationsString = [userInfo objectForKey:@"clearNotifications"];
+        if (clearNotificationsString != nil) {
+            clearNotificationsString = [clearNotificationsString stringByReplacingOccurrencesOfString:@"[" withString:@""];
+            clearNotificationsString = [clearNotificationsString stringByReplacingOccurrencesOfString:@"]" withString:@""];
+        
+            NSArray * clearNotificationsArray = [clearNotificationsString componentsSeparatedByString:@","];
+
+            for (NSString *notId in clearNotificationsArray){
+                if ([notId isKindOfClass:[NSString class]]) {
+                    NSNumber *clearNotificationId = @([notId integerValue]);
+                    if (clearNotificationId > 0) {
+                        NSLog(@"Push Plugin clearing notId %@", clearNotificationId);
+                        [pushHandler clearRealNotification:clearNotificationId];
+                    }
+                }
+            }
+        }
+    } @catch (NSException *exception) {
+        NSLog(@"Push Plugin could not parse clearNotifications array");
+    }
+}
+
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
        willPresentNotification:(UNNotification *)notification
          withCompletionHandler:(void (^)(UNNotificationPresentationOptions options))completionHandler
@@ -197,7 +228,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
     pushHandler.isInline = YES;
     [pushHandler notificationReceived];
 
-    completionHandler(UNNotificationPresentationOptionNone);
+    completionHandler(UNNotificationPresentationOptionBadge);
 }
 
 - (void)userNotificationCenter:(UNUserNotificationCenter *)center
