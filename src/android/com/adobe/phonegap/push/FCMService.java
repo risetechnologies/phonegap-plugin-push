@@ -98,9 +98,26 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       String titleKey = prefs.getString(TITLE_KEY, TITLE);
 
       extras = normalizeExtras(applicationContext, extras, messageKey, titleKey);
+      String clearNotifications = extras.getString(CLEAR_NOTIFICATIONS);
 
       if (clearBadge) {
         PushPlugin.setApplicationIconBadgeNumber(getApplicationContext(), 0);
+      }
+
+      if (clearNotifications != null) {
+        Log.d(LOG_TAG, clearNotifications);
+        try {
+          Log.d(LOG_TAG, "cancel notifications " + clearNotifications);
+          JSONArray notificationIds = new JSONArray(clearNotifications);
+          if (notificationIds.length() != 0) {
+            for (int i = 0; i < notificationIds.length(); i++) {
+              int clearNotificationId = notificationIds.getInt(i);
+              PushPlugin.clearNotification(getApplicationContext(), clearNotificationId);
+            }
+          }
+        } catch (JSONException e) {
+          Log.e(LOG_TAG, "malformed clear notifications =[" + clearNotifications + "]");
+        }
       }
 
       // if we are in the foreground and forceShow is `false` only send data
@@ -128,6 +145,24 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
       }
     }
   }
+    /*
+     * Cancel a notification
+     */
+    private void cancelNotification(int notificationId) {
+      NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+      String appName = getAppName(this);
+
+      if (notificationId != 0) {
+        Log.d(LOG_TAG, "cancel notification id: " + notificationId);
+        setNotification(notificationId, "");
+        try {
+          notificationManager.cancel(appName, notificationId);
+        } catch (NullPointerException e) {
+          Log.e(LOG_TAG, "could not cancel notification id: " + notificationId);
+        }
+      }
+    }
+
 
   /*
    * Change a values key in the extras bundle
