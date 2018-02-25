@@ -105,4 +105,5 @@ public interface PushConstants {
   public static final String LINES = "lines";
   public static final String SILENT = "silent";
   public static final String CONTENT_UPDATE = "contentUpdate";
+  public static final String FOREGROUND_PRIORITY = "foregroundPriority";
 }
