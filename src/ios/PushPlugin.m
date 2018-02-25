@@ -35,6 +35,7 @@
 
 @synthesize notificationMessage;
 @synthesize isInline;
+@synthesize tapped;
 @synthesize coldstart;
 
 @synthesize callbackId;
@@ -496,6 +497,12 @@
             [additionalData setObject:[NSNumber numberWithBool:NO] forKey:@"coldstart"];
         }
 
+        if (tapped) {
+            [additionalData setObject:[NSNumber numberWithBool:YES] forKey:@"tapped"];
+        } else {
+            [additionalData setObject:[NSNumber numberWithBool:NO] forKey:@"tapped"];
+        }
+
         [message setObject:additionalData forKey:@"additionalData"];
 
         // send notification message
@@ -505,6 +512,7 @@
 
         self.coldstart = NO;
         self.notificationMessage = nil;
+        self.tapped = false;
     }
 }
 
