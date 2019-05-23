@@ -121,6 +121,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
 
             pushHandler.notificationMessage = userInfo;
             pushHandler.isInline = NO;
+            pushHandler.tapped = false;
             [pushHandler notificationReceived];
         } else {
             NSLog(@"just put it in the shade");
@@ -176,6 +177,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
 
     if (self.launchNotification) {
         pushHandler.isInline = NO;
+        pushHandler.tapped = true;
         pushHandler.coldstart = [self.coldstart boolValue];
         pushHandler.notificationMessage = self.launchNotification;
         self.launchNotification = nil;
@@ -195,6 +197,7 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
     PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
     pushHandler.notificationMessage = notification.request.content.userInfo;
     pushHandler.isInline = YES;
+    pushHandler.tapped = false;
     [pushHandler notificationReceived];
 
     completionHandler(UNNotificationPresentationOptionNone);
