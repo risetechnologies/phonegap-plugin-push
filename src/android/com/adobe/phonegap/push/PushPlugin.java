@@ -252,12 +252,6 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
               setApplicationIconBadgeNumber(getApplicationContext(), 0);
             }
 
-            try {
-              editor.putString(FOREGROUND_PRIORITY, jo.getString(FOREGROUND_PRIORITY));
-            } catch (JSONException e) {
-              Log.d(LOG_TAG, "no foregroundPriority option");
-            }
-
             editor.putBoolean(SOUND, jo.optBoolean(SOUND, true));
             editor.putBoolean(VIBRATE, jo.optBoolean(VIBRATE, true));
             editor.putBoolean(CLEAR_BADGE, clearBadge);
@@ -303,7 +297,6 @@ public class PushPlugin extends CordovaPlugin implements PushConstants {
               editor.remove(CLEAR_NOTIFICATIONS);
               editor.remove(FORCE_SHOW);
               editor.remove(SENDER_ID);
-              editor.remove(FOREGROUND_PRIORITY);
               editor.commit();
             }
 

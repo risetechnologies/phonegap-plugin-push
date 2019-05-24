@@ -525,7 +525,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     /*
      *  Priority Notification
      */
-    setNotificationPriority(context, extras, mBuilder);
+    setNotificationPriority(extras, mBuilder);
 
     /*
      * Notification message
@@ -824,17 +824,12 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     }
   }
 
-  private void setNotificationPriority(Context context, Bundle extras, NotificationCompat.Builder mBuilder) {
-    SharedPreferences prefs = context.getSharedPreferences(PushPlugin.COM_ADOBE_PHONEGAP_PUSH, Context.MODE_PRIVATE);
-    String foregroundPriority = prefs.getString(FOREGROUND_PRIORITY, null);
-    boolean foreground = extras.getBoolean(FOREGROUND);
+  private void setNotificationPriority(Bundle extras, NotificationCompat.Builder mBuilder) {
     String priorityStr = extras.getString(PRIORITY);
-    if (foreground && foregroundPriority != null) priorityStr = foregroundPriority;
     if (priorityStr != null) {
       try {
         Integer priority = Integer.parseInt(priorityStr);
         if (priority >= NotificationCompat.PRIORITY_MIN && priority <= NotificationCompat.PRIORITY_MAX) {
-          Log.d(LOG_TAG, "Priority set to " + priority);
           mBuilder.setPriority(priority);
         } else {
           Log.e(LOG_TAG, "Priority parameter must be between -2 and 2");
