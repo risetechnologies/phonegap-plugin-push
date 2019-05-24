@@ -405,7 +405,6 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     String appName = getAppName(this);
     String packageName = context.getPackageName();
     Resources resources = context.getResources();
-    int silent = parseInt(SILENT, extras);
 
     int notId = parseInt(NOT_ID, extras);
     Intent notificationIntent = new Intent(this, PushHandlerActivity.class);
@@ -465,13 +464,12 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     Log.d(LOG_TAG, "stored iconColor=" + localIconColor);
     Log.d(LOG_TAG, "stored sound=" + soundOption);
     Log.d(LOG_TAG, "stored vibrate=" + vibrateOption);
-    Log.d(LOG_TAG, "stored silent=" + silent);
 
     /*
      * Notification Vibration
      */
 
-    if (silent != 1) setNotificationVibration(extras, vibrateOption, mBuilder);
+    setNotificationVibration(extras, vibrateOption, mBuilder);
 
     /*
      * Notification Icon Color
@@ -513,14 +511,14 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     /*
      * Notification Sound
      */
-    if (silent != 1 && soundOption) {
+    if (soundOption) {
       setNotificationSound(context, extras, mBuilder);
     }
 
     /*
      *  LED Notification
      */
-    if (silent != 1) setNotificationLedColor(extras, mBuilder);
+    setNotificationLedColor(extras, mBuilder);
 
     /*
      *  Priority Notification
